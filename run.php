@@ -1,14 +1,13 @@
 <?php
 
-$excludeHooks = [
-    'init',
-    'validate',
-];
+include 'metadata.php';
 
-$extendList = [];
-$invokeList = [];
-$extensionMethodList = [];
+$extendHooks = [];
+$invokeHooks = [];
+$publicExtensionMethodList = [];
+$hookCalls = [];
 
+// find project root
 function findProjectRoot() {
     $currentDir = __DIR__;
     for ($i = 0; $i < 7; $i++) {
@@ -24,6 +23,7 @@ function findProjectRoot() {
     return $currentDir;
 }
 
+// recursively search files for something
 function searchFiles($what, $dir) {
     $files = scandir($dir);
     foreach ($files as $file) {
@@ -41,69 +41,115 @@ function searchFiles($what, $dir) {
                 if ($what == 'hooks') {
                     searchForHooks($path);
                 } elseif ($what == 'extensionMethods') {
-                    searchForExtensionMethods($path);
+                    searchForPublicExtensionMethods($path);
+                } elseif ($what == 'hookCalls') {
+                    searchForHookCalls($path);
+                } else {
+                    throw new Exception("Unknown search type: $what");
                 }
             }
         }
     }
 }
 
+// search for ->extend() and ->invokeWithExtensions()
 function searchForHooks($path) {
-    global $extendList;
-    global $invokeList;
+    global $extendHooks;
+    global $invokeHooks;
     $c = file_get_contents($path);
-    if (preg_match('#->extend\([\'"](.+?)[\'"]#', $c, $m)) {
-        $name = $m[1];
-        $extendList[$name] = true;
+    $c = str_replace("[\n ]", '', $c);
+    preg_match_all('#->extend\([\'"](.+?)[\'"]#', $c, $m);
+    for ($i = 0; $i < count($m[0]); $i++) {
+        $name = $m[1][$i];
+        $extendHooks[$name] = true;
     }
-    if (preg_match('#->invokeWithExtensions\([\'"](.+?)[\'"]#', $c, $m)) {
-        $name = $m[1];
-        $invokeList[$name] = true;
+    preg_match_all('#->invokeWithExtensions\([\'"](.+?)[\'"]#', $c, $m);
+    for ($i = 0; $i < count($m[0]); $i++) {
+        $name = $m[1][$i];
+        $invokeHooks[$name] = true;
     }
 }
 
-function searchForExtensionMethods($path) {
-    global $extendList;
-    global $invokeList;
-    global $extensionMethodList;
+// search for implementations of extension methods that are public
+function searchForPublicExtensionMethods($path) {
+    global $publicExtensionMethodList;
     global $projectRoot;
-    global $excludeHooks;
+    global $doNotMakeHookProtected;
+    global $allHooks;
     $c = file_get_contents($path);
     preg_match('#vendor/(.+?)/(.+?)/#', $path, $m);
     $module = $m[1] . '/' . $m[2];
     $moduleFile = str_replace("$projectRoot/vendor/$module/", '', $path);
-    foreach (array_keys($extendList) as $hook) {
-        if (in_array($hook, $excludeHooks)) {
+    foreach (array_keys($allHooks) as $hook) {
+        if (in_array($hook, $doNotMakeHookProtected)) {
             continue;
         }
         if (str_contains($c, 'public function ' . $hook . '(')) {
             // echo "Found $hook() in $file\n";
-            $extensionMethodList[$module][$moduleFile][$hook] = 1;
+            $publicExtensionMethodList[$module][$moduleFile][$hook] = 1;
+        }
+    }
+}
+
+// search for calls to hooks - means they shouldn't be make public
+function searchForHookCalls($path) {
+    global $allHooks;
+    global $hookCalls;
+    $c = file_get_contents($path);
+    foreach (array_keys($allHooks) as $hook) {
+        if (str_contains($c, '->' . $hook . '(')) {
+            $hookCalls[$hook] = true;
         }
     }
 }
 
 $projectRoot = findProjectRoot();
-searchFiles('hooks', "$projectRoot/vendor/silverstripe");
+foreach ($accounts as $account) {
+    searchFiles('hooks', "$projectRoot/vendor/$account");
+}
 
-ksort($extendList);
-ksort($invokeList);
-// echo "\nextendList\n";
-// print_r($extendList);
-// echo "\ninvokeList\n";
-// print_r($invokeList);
+$allHooks = array_merge(array_keys($extendHooks), array_keys($invokeHooks));
+$allHooks = array_fill_keys($allHooks, true);
+ksort($allHooks);
 
-searchFiles('extensionMethods', "$projectRoot/vendor/silverstripe");
+// used to populate $doNotMakeHookProtected
+foreach ($accounts as $account) {
+    searchFiles('hookCalls', "$projectRoot/vendor/$account");
+}
+ksort($hookCalls);
+foreach (array_keys($hookCalls) as $hook) {
+    // echo "'$hook',\n";
+}
 
-ksort($extensionMethodList);
-foreach (array_keys($extensionMethodList) as $module) {
-    echo "\n$module\n";
-    ksort($extensionMethodList[$module]);
-    foreach (array_keys($extensionMethodList[$module]) as $file) {
-        echo "\n  $file\n";
-        ksort($extensionMethodList[$module][$file]);
-        foreach (array_keys($extensionMethodList[$module][$file]) as $hook) {
-            echo "    $hook\n";
+// used to populate $makeHookProtected
+foreach (array_keys($allHooks) as $hook) {
+    if (!array_key_exists($hook, $hookCalls)) {
+        echo "'$hook',\n";
+    }
+}
+die;
+
+
+// find extension methods in files
+foreach ($accounts as $account) {
+    searchFiles('extensionMethods', "$projectRoot/vendor/$account");
+}
+
+// ksort $publicExtensionMethodList
+ksort($publicExtensionMethodList);
+foreach (array_keys($publicExtensionMethodList) as $module) {
+    // echo "\n$module\n";
+    ksort($publicExtensionMethodList[$module]);
+    foreach (array_keys($publicExtensionMethodList[$module]) as $file) {
+        // echo "\n  $file\n";
+        ksort($publicExtensionMethodList[$module][$file]);
+        foreach (array_keys($publicExtensionMethodList[$module][$file]) as $hook) {
+            if (!in_array($hook, $makeHookProtected)) {
+                continue;
+            }
+            // echo "\n    $hook\n";
         }
     }
 }
+
+// file_put_contents('make-protected.txt', var_export($publicExtensionMethodList, true));
