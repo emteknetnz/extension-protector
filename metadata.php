@@ -417,8 +417,8 @@ $makeHookProtected = [
     'updatelocaliseCondition',
     'updatelocaliseConditionDefault',
     // manually moved from $doNotMakeHookProtected to this list
-    'augmentNewSiteTreeItem',
-    'accessedCMS',
-    'updateCMSFields',
-    'updateFrontEndFields',
+    'augmentNewSiteTreeItem', // call was example in code comment
+    'accessedCMS', // call was example in code comment
+    'updateCMSFields', // call was example in code comment
+    'updateFrontEndFields', // call was example in code comment
 ];
