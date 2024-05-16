@@ -44,6 +44,7 @@ $doNotMakeHookProtected = [
     'validate', // Method on DataObject
     // manually moved from $makeProtected to this list
     'MetaTags', // method on SiteTree
+    'forgotPassword', // method on LostPasswordHandler
 ];
 
 $makeHookProtected = [
@@ -103,7 +104,6 @@ $makeHookProtected = [
     'extendCanExecute',
     'failedLogin',
     'failedLogout',
-    'forgotPassword',
     'getErrorRecordFor',
     'handleAccountReset',
     'memberAutoLoggedIn',
