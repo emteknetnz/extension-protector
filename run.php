@@ -124,32 +124,45 @@ foreach (array_keys($hookCalls) as $hook) {
 // used to populate $makeHookProtected
 foreach (array_keys($allHooks) as $hook) {
     if (!array_key_exists($hook, $hookCalls)) {
-        echo "'$hook',\n";
+        // echo "'$hook',\n";
     }
 }
-die;
-
 
 // find extension methods in files
 foreach ($accounts as $account) {
     searchFiles('extensionMethods', "$projectRoot/vendor/$account");
 }
 
+$updatedModules = [];
+
 // ksort $publicExtensionMethodList
+$out = '';
 ksort($publicExtensionMethodList);
 foreach (array_keys($publicExtensionMethodList) as $module) {
-    // echo "\n$module\n";
+    $out .= "\n$module\n";
     ksort($publicExtensionMethodList[$module]);
     foreach (array_keys($publicExtensionMethodList[$module]) as $file) {
-        // echo "\n  $file\n";
+        $out .= "\n  $file\n";
+        $c = file_get_contents("$projectRoot/vendor/$module/$file");
+        $oc = $c;
         ksort($publicExtensionMethodList[$module][$file]);
         foreach (array_keys($publicExtensionMethodList[$module][$file]) as $hook) {
             if (!in_array($hook, $makeHookProtected)) {
                 continue;
             }
-            // echo "\n    $hook\n";
+            $out .= "\n    $hook\n";
+            $c = str_replace('public function ' . $hook . '(', 'protected function ' . $hook . '(', $c);
+            if ($c == $oc) {
+                continue;
+            }
+            file_put_contents("$projectRoot/vendor/$module/$file", $c);
+            $updatedModules[$module] = true;
         }
     }
 }
+// file_put_contents('make-protected.txt', $out);
 
-// file_put_contents('make-protected.txt', var_export($publicExtensionMethodList, true));
+echo "Updated modules:\n";
+foreach (array_keys($updatedModules) as $module) {
+    echo "$module\n";
+}
