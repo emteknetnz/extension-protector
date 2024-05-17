@@ -31,9 +31,6 @@ function searchFiles($what, $dir) {
             continue;
         }
         $path = $dir . '/' . $file;
-        if (str_contains($path, '/tests/')) {
-            continue;
-        }
         if (is_dir($path)) {
             searchFiles($what, $path);
         } else {
@@ -161,6 +158,7 @@ foreach (array_keys($publicExtensionMethodList) as $module) {
     }
 }
 // file_put_contents('make-protected.txt', $out);
+// die;
 
 echo "Updated modules:\n";
 foreach (array_keys($updatedModules) as $module) {
