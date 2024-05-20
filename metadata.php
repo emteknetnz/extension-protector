@@ -27,10 +27,6 @@ $doNotMakeHookProtected = [
     'isArchived', // Method on Versioned
     'isAvailableInLocale', // Called by FluentFilteredExtension, FluentAdminTrait
     'onAfterBuild', // Called by DatabaseAdmin
-    'onAfterDelete', // Called by DataObject
-    'onAfterWrite', // Called by DataObject
-    'onBeforeDelete', // Called by DataObject
-    'onBeforeWrite', // Called by DataObject, Resolver
     'populateDefaults', // Called by DataObject
     'registerFailedLogin', // Called by MemberAuthenticator, LoginHandler
     'requireDefaultRecords', // Called by various classes
@@ -421,4 +417,9 @@ $makeHookProtected = [
     'accessedCMS', // call was example in code comment
     'updateCMSFields', // call was example in code comment
     'updateFrontEndFields', // call was example in code comment
+    // Only called within it's own class so can be protected
+    'onAfterDelete', // Called by DataObject
+    'onAfterWrite', // Called by DataObject
+    'onBeforeDelete', // Called by DataObject
+    'onBeforeWrite', // Called by DataObject, elemental Resolver (have updated BaseElement.php)
 ];
