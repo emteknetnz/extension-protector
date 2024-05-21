@@ -32,9 +32,11 @@ function searchFiles($what, $dir) {
         }
         $path = $dir . '/' . $file;
         if (is_dir($path)) {
-            searchFiles($what, $path);
+            if (!str_contains($dir, '.git')) {
+                searchFiles($what, $path);
+            }
         } else {
-            if (pathinfo($file, PATHINFO_EXTENSION) == 'php') {
+            if (in_array(pathinfo($file, PATHINFO_EXTENSION), ['php', 'md'])) {
                 if ($what == 'hooks') {
                     searchForHooks($path);
                 } elseif ($what == 'extensionMethods') {
@@ -152,13 +154,13 @@ foreach (array_keys($publicExtensionMethodList) as $module) {
             if ($c == $oc) {
                 continue;
             }
-            file_put_contents("$projectRoot/vendor/$module/$file", $c);
+            // file_put_contents("$projectRoot/vendor/$module/$file", $c);
             $updatedModules[$module] = true;
         }
     }
 }
-// file_put_contents('make-protected.txt', $out);
-// die;
+file_put_contents('make-protected.txt', $out);
+die;
 
 echo "Updated modules:\n";
 foreach (array_keys($updatedModules) as $module) {
